@@ -3,7 +3,7 @@
     "version": "0.0.0",
     "description": "Dynamic Web Server using Node JS",
     "author": {
-        "name": "",
+        "name": "Shijun Yang",
         "email": ""
     },
     "contributors": [
@@ -12,14 +12,14 @@
             "email": ""
         },
         {
-            "name": "",
-            "email": ""
+            "name": "Luca Comba",
+            "email": "comb6457@stthomas.edu"
         }
     ],
-    "main": "server.js",
+    "main": "eserver.js",
     "repository": {
         "type": "git",
-        "url": ""
+        "url": "https://github.com/yang7656/CISC375-RESTful"
     },
     "dependencies": {
         "express": "^4.17.1",
