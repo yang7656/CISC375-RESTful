@@ -4,12 +4,12 @@
     "description": "Dynamic Web Server using Node JS",
     "author": {
         "name": "Shijun Yang",
-        "email": ""
+        "email": "yang7656@stthomas.edu"
     },
     "contributors": [
         {
-            "name": "",
-            "email": ""
+            "name": "Shijun Yang",
+            "email": "yang7656@stthomas.edu"
         },
         {
             "name": "Luca Comba",
