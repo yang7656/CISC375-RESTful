@@ -1,5 +1,4 @@
 // Built-in Node.js modules
-var fs = require('fs');
 var path = require('path');
 
 // NPM modules
@@ -9,12 +8,10 @@ var bodyParser = require('body-parser');
 var convert = require('xml-js');
 
 var db_filename = path.join(__dirname, 'stpaul_crime.sqlite3');
-
 var app = express();
 var port = 8000;
 
 app.use(bodyParser.urlencoded({extended: true}));
-
 
 // open stpaul_crime.sqlite3 database
 var db = new sqlite3.Database(db_filename, sqlite3.OPEN_READONLY, (err) => {
@@ -26,10 +23,8 @@ var db = new sqlite3.Database(db_filename, sqlite3.OPEN_READONLY, (err) => {
     }
 });
 
-
 // IN cmd 'curl -X PUT -d "id=1&name=hellow%20world&email=hu%40code.org" http://localhost:8000/add-users'
 // IN cmd 'curl http://localhost:8000/list-users'
-
 app.get('/codes', (req, res) => {
     db.all("SELECT * FROM Codes ORDER BY code", (err,rows) => {
         
@@ -132,20 +127,19 @@ app.get('/incidents', (req, res) => {
         
         if (req.query.hasOwnProperty('start_date')) {
             var input = req.query.start_date.split('-'); // array of month, day, year
-            var start_date = rows[0].date_time.split('T')[0].split('-')[0] + 
-                             rows[0].date_time.split('T')[0].split('-')[1] + 
-                             rows[0].date_time.split('T')[0].split('-')[2];
-            var end_date = rows[rows.length-1].date_time.split('T')[0].split('-')[0] + 
-                           rows[rows.length-1].date_time.split('T')[0].split('-')[1] + 
-                           rows[rows.length-1].date_time.split('T')[0].split('-')[2];
-            if (parseInt(input[2]+input[0]+input[1]) < parseInt(start_date) || parseInt(input[2]+input[0]+input[1]) > parseInt(end_date)) {
+            var crime_start_date = rows[0].date_time.split('T')[0].split('-')[0] + 
+                                   rows[0].date_time.split('T')[0].split('-')[1] + 
+                                   rows[0].date_time.split('T')[0].split('-')[2];
+            var crime_end_date = rows[rows.length-1].date_time.split('T')[0].split('-')[0] + 
+                                 rows[rows.length-1].date_time.split('T')[0].split('-')[1] + 
+                                 rows[rows.length-1].date_time.split('T')[0].split('-')[2];
+            if (parseInt(input[2]+input[0]+input[1]) < parseInt(crime_start_date) || parseInt(input[2]+input[0]+input[1]) > parseInt(crime_end_date)) {
                 res.status(500).send('Error: No such start date');
             }
             else {
-                var start_index;
-                var startIndex = [];
-                var lastIndex;
-
+                var start_index; // the index of first case in the start_date
+                var startIndex = []; // array contain all index of cases in the start_date
+                var lastIndex; // the last index of case in results
                 for (let i = 0; i < rows.length; i++) {
                     var eachDate = rows[i].date_time.split('T')[0].split('-'); // array of year, month, day
                     if (input[0] === eachDate[1] && input[1] === eachDate[2] && input[2] === eachDate[0]) {
@@ -154,16 +148,66 @@ app.get('/incidents', (req, res) => {
                 }
                 start_index = startIndex[0];
                 if (start_index + 9999 >= rows.length) {
-                    lastIndex = rows.length-1;
+                    lastIndex = rows.length - 1;
                 }
                 else {
                     lastIndex = start_index + 9999;
                 }
-                
+                var count = 0;
+                for (let j = lastIndex; j > start_index-1; j--) {
+                    var crime_case = {};
+                    crime_case['date'] = rows[j].date_time.split('T')[0];
+                    crime_case['time'] = rows[j].date_time.split('T')[1];
+                    crime_case['code'] = rows[j].code;
+                    crime_case['incident'] = rows[j].incident;
+                    crime_case['police_grid'] = rows[j].police_grid;
+                    crime_case['neighborhood_number'] = rows[j].neighborhood_number;
+                    crime_case['block'] = rows[j].block;
+                    crime['I'+rows[j].case_number] = crime_case;
+                }
+                res.type('json').send(JSON.stringify(crime, null, 4));
             }
         }
         else if (req.query.hasOwnProperty('end_date')) {
-            
+            var input = req.query.end_date.split('-'); // array of month, day, year
+            var crime_start_date = rows[0].date_time.split('T')[0].split('-')[0] + 
+                                   rows[0].date_time.split('T')[0].split('-')[1] + 
+                                   rows[0].date_time.split('T')[0].split('-')[2];
+            var crime_end_date = rows[rows.length-1].date_time.split('T')[0].split('-')[0] + 
+                                 rows[rows.length-1].date_time.split('T')[0].split('-')[1] + 
+                                 rows[rows.length-1].date_time.split('T')[0].split('-')[2];
+            if (parseInt(input[2]+input[0]+input[1]) < parseInt(crime_start_date) || parseInt(input[2]+input[0]+input[1]) > parseInt(crime_end_date)) {
+                res.status(500).send('Error: No such end date');
+            }
+            else {
+                var end_index;  // the index of last case in the end_date
+                var firstIndex; // the first index of case in results
+                for (let i = 0; i < rows.length; i++) {
+                    var eachDate = rows[i].date_time.split('T')[0].split('-'); // array of year, month, day
+                    if (input[0] === eachDate[1] && input[1] === eachDate[2] && input[2] === eachDate[0]) {
+                        end_index = i;
+                    }
+                }
+                if (end_index - 999 < 0) {
+                    firstIndex = 0;
+                }
+                else {
+                    firstIndex = end_index - 999;
+                }
+                for (let j = end_index; j > firstIndex-1; j--) {
+                    var crime_case = {};
+                    crime_case['date'] = rows[j].date_time.split('T')[0];
+                    crime_case['time'] = rows[j].date_time.split('T')[1];
+                    crime_case['code'] = rows[j].code;
+                    crime_case['incident'] = rows[j].incident;
+                    crime_case['police_grid'] = rows[j].police_grid;
+                    crime_case['neighborhood_number'] = rows[j].neighborhood_number;
+                    crime_case['block'] = rows[j].block;
+                    crime_case['count'] = count;
+                    crime['I'+rows[j].case_number] = crime_case;
+                }
+                res.type('json').send(JSON.stringify(crime, null, 4));
+            }
         }
         else if (req.query.hasOwnProperty('code')) {
             
@@ -181,7 +225,7 @@ app.get('/incidents', (req, res) => {
             
         }
         else {
-            var start_index = 0;
+            var start_index = 0;  
             if (rows.length - 10000 > 0) {
                 start_index = rows.length - 10001;
             }
