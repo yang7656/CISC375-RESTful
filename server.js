@@ -14,7 +14,7 @@ var port = 8000;
 app.use(bodyParser.urlencoded({extended: true}));
 
 // open stpaul_crime.sqlite3 database
-var db = new sqlite3.Database(db_filename, sqlite3.OPEN_READONLY, (err) => {
+var db = new sqlite3.Database(db_filename, sqlite3, (err) => {
     if (err) {
         console.log('Error opening ' + db_filename);
     }
@@ -26,10 +26,11 @@ var db = new sqlite3.Database(db_filename, sqlite3.OPEN_READONLY, (err) => {
 // IN cmd 'curl -X PUT -d "id=1&name=hellow%20world&email=hu%40code.org" http://localhost:8000/add-users'
 // IN cmd 'curl http://localhost:8000/list-users'
 app.get('/codes', (req, res) => {
+    
     db.all("SELECT * FROM Codes ORDER BY code", (err,rows) => {
         
         var crime = {};
-        
+        console.log(req.query);
         if (req.query.hasOwnProperty('code')) {
             var range = req.query.code.split(',');
             var min = parseInt(range[0],10);
@@ -72,6 +73,7 @@ app.get('/codes', (req, res) => {
 });
 
 app.get('/neighborhoods', (req, res) => {
+    
     db.all("SELECT * FROM Neighborhoods ORDER BY neighborhood_number", (err,rows) => {
         
         var crime = {};
@@ -118,8 +120,6 @@ app.get('/neighborhoods', (req, res) => {
 });
 
 app.get('/incidents', (req, res) => {
-    
-    var outputString = '{\n';
     
     db.all("SELECT * FROM Incidents ORDER BY date_time", (err,rows) => {
         
@@ -188,11 +188,11 @@ app.get('/incidents', (req, res) => {
                         end_index = i;
                     }
                 }
-                if (end_index - 999 < 0) {
+                if (end_index - 9999 < 0) {
                     firstIndex = 0;
                 }
                 else {
-                    firstIndex = end_index - 999;
+                    firstIndex = end_index - 9999;
                 }
                 for (let j = end_index; j > firstIndex-1; j--) {
                     var crime_case = {};
@@ -210,26 +210,84 @@ app.get('/incidents', (req, res) => {
             }
         }
         else if (req.query.hasOwnProperty('code')) {
-            
+            var input = req.query.code.split(',');
+            var min = parseInt(input[0], 10);
+            var max = parseInt(input[1], 10);
+            var count = 0;
+            for (let i = rows.length-1; i > -1; i--) {
+                var crime_case = {};
+                if (count < 10000) {
+                    if (rows[i].code >= min && rows[i].code <= max) {
+                        crime_case['date'] = rows[i].date_time.split('T')[0];
+                        crime_case['time'] = rows[i].date_time.split('T')[1];
+                        crime_case['code'] = rows[i].code;
+                        crime_case['incident'] = rows[i].incident;
+                        crime_case['police_grid'] = rows[i].police_grid;
+                        crime_case['neighborhood_number'] = rows[i].neighborhood_number;
+                        crime_case['block'] = rows[i].block;
+                        //crime_case['count'] = count;
+                        count++;
+                        crime['I'+rows[i].case_number] = crime_case;
+                    }
+                }
+            }
+            res.type('json').send(JSON.stringify(crime, null, 4));
         }
         else if (req.query.hasOwnProperty('grid')) {
-            
+            var input = req.query.grid.split(',');
+            var min = parseInt(input[0], 10);
+            var max = parseInt(input[1], 10);
+            var count = 0;
+            for (let i = rows.length-1; i > -1; i--) {
+                var crime_case = {};
+                if (count < 10000) {
+                    if (rows[i].police_grid  >= min && rows[i].police_grid  <= max) {
+                        crime_case['date'] = rows[i].date_time.split('T')[0];
+                        crime_case['time'] = rows[i].date_time.split('T')[1].substring(0,rows[i].date_time.split('T')[1].length-4);
+                        crime_case['code'] = rows[i].code;
+                        crime_case['incident'] = rows[i].incident;
+                        crime_case['police_grid'] = rows[i].police_grid;
+                        crime_case['neighborhood_number'] = rows[i].neighborhood_number;
+                        crime_case['block'] = rows[i].block;
+                        //crime_case['count'] = count;
+                        count++;
+                        crime['I'+rows[i].case_number] = crime_case;
+                    }
+                }
+            }
+            res.type('json').send(JSON.stringify(crime, null, 4));
         }
-        else if (req.query.hasOwnProperty('neighborhood')) {
-            
+        else if (req.query.hasOwnProperty('id')) {
+            var input = req.query.id.split(',');
+            var min = parseInt(input[0], 10);
+            var max = parseInt(input[1], 10);
+            var count = 0;  
+            for (let i = rows.length-1; i > -1; i--) {
+                var crime_case = {};
+                if (count < 10000) {
+                    if (rows[i].neighborhood_number  >= min && rows[i].neighborhood_number  <= max) {
+                        crime_case['date'] = rows[i].date_time.split('T')[0];
+                        crime_case['time'] = rows[i].date_time.split('T')[1].substring(0,rows[i].date_time.split('T')[1].length-4);
+                        crime_case['code'] = rows[i].code;
+                        crime_case['incident'] = rows[i].incident;
+                        crime_case['police_grid'] = rows[i].police_grid;
+                        crime_case['neighborhood_number'] = rows[i].neighborhood_number;
+                        crime_case['block'] = rows[i].block;
+                        //crime_case['count'] = count;
+                        count++;
+                        crime['I'+rows[i].case_number] = crime_case;
+                    }
+                }
+            }
+            res.type('json').send(JSON.stringify(crime, null, 4));
         }
         else if (req.query.hasOwnProperty('limit')) {
-            
-        }
-        else if (req.query.hasOwnProperty('format')) {
-            
-        }
-        else {
+            var input = parseInt(req.query.limit, 10);
             var start_index = 0;  
-            if (rows.length - 10000 > 0) {
-                start_index = rows.length - 10001;
+            if (rows.length - input > 0) {
+                start_index = rows.length - input;
             }
-            for (let i = rows.length-1; i > start_index; i--) {
+            for (let i = rows.length-1; i > start_index-1; i--) {
                 var crime_case = {};
                 crime_case['date'] = rows[i].date_time.split('T')[0];
                 crime_case['time'] = rows[i].date_time.split('T')[1].substring(0,rows[i].date_time.split('T')[1].length-4);
@@ -242,6 +300,62 @@ app.get('/incidents', (req, res) => {
             }
             res.type('json').send(JSON.stringify(crime, null, 4));
         }
+        else if (req.query.hasOwnProperty('format')) {
+            var iXML = {'INCIDENTS' : {}}
+            var start_index = 0;
+            if (rows.length - 10000 >= 0) {
+                start_index = rows.length - 10000;
+            }
+            for (let i = rows.length-1; i > start_index-1; i--) {
+                var crime_case = {};
+                crime_case['date'] = rows[i].date_time.split('T')[0];
+                crime_case['time'] = rows[i].date_time.split('T')[1].substring(0,rows[i].date_time.split('T')[1].length-4);
+                crime_case['code'] = rows[i].code;
+                crime_case['incident'] = rows[i].incident;
+                crime_case['police_grid'] = rows[i].police_grid;
+                crime_case['neighborhood_number'] = rows[i].neighborhood_number;
+                crime_case['block'] = rows[i].block;
+                iXML.INCIDENTS['I'+rows[i].case_number] = crime_case;
+            }
+            if (req.query.format === 'xml') {
+                var options = {compact: true, spaces: 4};
+                var result = convert.js2xml(iXML,options);
+                res.type('xml').send(result);
+            }
+        }
+        else {
+            var start_index = 0;  
+            if (rows.length - 10000 > 0) {
+                start_index = rows.length - 10000;
+            }
+            for (let i = rows.length-1; i > start_index-1; i--) {
+                var crime_case = {};
+                crime_case['date'] = rows[i].date_time.split('T')[0];
+                crime_case['time'] = rows[i].date_time.split('T')[1].substring(0,rows[i].date_time.split('T')[1].length-4);
+                crime_case['code'] = rows[i].code;
+                crime_case['incident'] = rows[i].incident;
+                crime_case['police_grid'] = rows[i].police_grid;
+                crime_case['neighborhood_number'] = rows[i].neighborhood_number;
+                crime_case['block'] = rows[i].block;
+                crime['I'+rows[i].case_number] = crime_case;
+            }
+            res.type('json').send(JSON.stringify(crime, null, 4));
+        }
+    });
+});
+
+app.put('/new-incident', (req, res) => {
+    
+    var crime_case = {};
+    crime_case['date'] = req.body.date;
+    crime_case['time'] = req.body.time;
+    crime_case['code'] = req.body.code;
+    crime_case['incident'] = req.body.incident;
+    crime_case['police_grid'] = req.body.police_grid;
+    crime_case['neighborhood_number'] = req.body.neighborhood_number;
+    crime_case['block'] = req.body.block;
+    db.all('INSERT INTO Incidents VALUES(1, "2010-12-23T02:25:45", 2, "diaorendilaomu", 89, 2, "5th Ave S")', (err) => {
+        res.status(500).send(err);
     });
 });
 
