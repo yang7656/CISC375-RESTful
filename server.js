@@ -30,42 +30,57 @@ app.get('/codes', (req, res) => {
     db.all("SELECT * FROM Codes ORDER BY code", (err,rows) => {
         
         var crime = {};
-        console.log(req.query);
-        if (req.query.hasOwnProperty('code')) {
-            var range = req.query.code.split(',');
-            var min = parseInt(range[0],10);
-            var max = parseInt(range[1],10);
-            var count = -1;
-            for (let i = 0; i < rows.length; i++) {
-                if (rows[i].code >= min && rows[i].code <= max) {
-                    crime['C'+rows[i].code] = rows[i].incident_type;
-                    count++;
-                }
+        
+        if (Object.getOwnPropertyNames(req.query).length > 0) {
+            
+            var min = rows[0].code;
+            var max = rows[rows.length-1].code;
+            
+            if (req.query.hasOwnProperty('code')) {
+                var range = req.query.code.split(',');
+                min = parseInt(range[0],10);
+                max = parseInt(range[1],10);
             }
-            if (count < 0) {
-                res.status(500).send('Error: No such code range');
+            
+            if (min > max) {
+                res.status(500).send('Error: Range mistake');
             }
             else {
-                res.type('json').send(JSON.stringify(crime, null, 4));
-            }
-        }
-        else if (req.query.hasOwnProperty('format')) {
-            var crimeXML = {'CODES' : {}}
-            for (let i = 0; i < rows.length; i++) {
-                crimeXML.CODES['C'+rows[i].code] = rows[i].incident_type;
-                crime['C'+rows[i].code] = rows[i].incident_type;
-            }
-            if (req.query.format === 'xml') {
-                var options = {compact: true, spaces: 4};
-                var result = convert.js2xml(crimeXML,options);
-                res.type('xml').send(result);
-            } else {
-                res.type('json').send(JSON.stringify(crime, null, 4));
+                var count = -1;
+                var crimeXML = {'CODES' : {}};
+                for (let i = 0; i < rows.length; i++) {
+                    if (rows[i].code >= min && rows[i].code <= max) {
+                        crimeXML.CODES['C'+rows[i].code] = rows[i].incident_type;
+                        crime['C'+rows[i].code] = rows[i].incident_type;
+                        count++;
+                    }
+                }
+                if (count < 0) {
+                    res.status(500).send('Error: No such code range');
+                }
+                else {
+                    if (req.query.hasOwnProperty('format')) {
+                        if (req.query.format === 'xml') {
+                            var options = {compact: true, spaces: 4};
+                            var result = convert.js2xml(crimeXML, options);
+                            res.type('xml').send(result);
+                        }
+                        else if (req.query.format === 'json') {
+                            res.type('json').send(JSON.stringify(crime, null, 4));
+                        }
+                        else {
+                            res.status(500).send('Error: No such format');
+                        }
+                    }
+                    else {
+                        res.type('json').send(JSON.stringify(crime, null, 4));
+                    }
+                }
             }
         }
         else {
             for (let i = 0; i < rows.length; i++) {
-                crime['C'+rows[i].code] = rows[i].incident_type;
+            crime['C'+rows[i].code] = rows[i].incident_type;
             }
             res.type('json').send(JSON.stringify(crime, null, 4));
         }
@@ -78,36 +93,50 @@ app.get('/neighborhoods', (req, res) => {
         
         var crime = {};
         
-        if (req.query.hasOwnProperty('id')) {
-            var range = req.query.id.split(',');
-            var min = parseInt(range[0],10);
-            var max = parseInt(range[1],10);
-            var count = -1;
-            for (let i = 0; i < rows.length; i++) {
-                if (rows[i].neighborhood_number >= min && rows[i].neighborhood_number <= max) {
-                    crime['N'+rows[i].neighborhood_number] = rows[i].neighborhood_name;
-                    count++;
-                }
-            }
-            if (count < 0) {
-                res.status(500).send('Error: No such id range');
+        if (Object.getOwnPropertyNames(req.query).length > 0) {
+            
+            var min = rows[0].neighborhood_number;
+            var max = rows[rows.length-1].neighborhood_number;
+              
+            if (req.query.hasOwnProperty('id')) {  
+                var range = req.query.id.split(',');
+                min = parseInt(range[0],10);
+                max = parseInt(range[1],10);
+            }    
+            if (min > max) {
+                res.status(500).send('Error: Range mistake');
             }
             else {
-                res.type('json').send(JSON.stringify(crime, null, 4));
-            }
-        }
-        else if (req.query.hasOwnProperty('format')) {
-            var nXML = {'NEIGHBORHOODS' : {}}
-            for (let i = 0; i < rows.length; i++) {
-                nXML.NEIGHBORHOODS['N'+rows[i].neighborhood_number] = rows[i].neighborhood_name;
-                crime['N'+rows[i].neighborhood_number] = rows[i].neighborhood_name;
-            }
-            if (req.query.format === 'xml') {
-                var options = {compact: true, spaces: 4};
-                var result = convert.js2xml(nXML,options);
-                res.type('xml').send(result);
-            } else {
-                res.type('json').send(JSON.stringify(crime, null, 4));
+                var count = -1;
+                var crimeXML = {'NEIGHBORHOODS' : {}};
+                for (let i = 0; i < rows.length; i++) {
+                    if (rows[i].neighborhood_number >= min && rows[i].neighborhood_number <= max) {
+                        crimeXML.NEIGHBORHOODS['N'+rows[i].neighborhood_number] = rows[i].neighborhood_name;
+                        crime['N'+rows[i].neighborhood_number] = rows[i].neighborhood_name;
+                        count++;
+                    }
+                }
+                if (count < 0) {
+                    res.status(500).send('Error: No such id range');
+                }
+                else {
+                    if (req.query.hasOwnProperty('format')) {
+                        if (req.query.format === 'xml') {
+                            var options = {compact: true, spaces: 4};
+                            var result = convert.js2xml(crimeXML, options);
+                            res.type('xml').send(result);
+                        }
+                        else if (req.query.format === 'json') {
+                            res.type('json').send(JSON.stringify(crime, null, 4));
+                        }
+                        else {
+                            res.status(500).send('Error: No such format');
+                        }
+                    }
+                    else {
+                        res.type('json').send(JSON.stringify(crime, null, 4));
+                    }
+                }
             }
         }
         else {
