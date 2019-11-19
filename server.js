@@ -151,249 +151,249 @@ app.get('/neighborhoods', (req, res) => {
     });
 });
 
+function filterIncident(StartDate_index, EndDate_index, Code, Grid, ID, Limit, Format, rows) {
+   
+    var count = 0;
+    var crime = {};
+    var crimeXML = {'INCIDENTS' : {}};
+    
+    var temCode = Code;
+    var temGrid = Grid;
+    var temID = ID;
+    
+    if (Format === 'json') {
+        for (let j = EndDate_index; j > StartDate_index-1; j--) {
+            if (Code === -1) {
+                temCode = rows[j].code;
+            }
+            if (Grid === -1) {
+                temGrid = rows[j].police_grid;
+            }
+            if (ID === -1) {
+                temID = rows[j].neighborhood_number;
+            }
+            if (rows[j].code === temCode && rows[j].police_grid === temGrid && rows[j].neighborhood_number == temID) {
+                var crime_case = {};
+                crime_case['date'] = rows[j].date_time.split('T')[0];
+                crime_case['time'] = rows[j].date_time.split('T')[1];
+                crime_case['code'] = rows[j].code;
+                crime_case['incident'] = rows[j].incident;
+                crime_case['police_grid'] = rows[j].police_grid;
+                crime_case['neighborhood_number'] = rows[j].neighborhood_number;
+                crime_case['block'] = rows[j].block;
+                crime_case['count'] = count;
+                crime['I'+rows[j].case_number] = crime_case;
+                count++;
+                if (count === Limit) {
+                    return crime;
+                }
+            }
+        }
+        return crime;
+    }
+    
+    if (Format === 'xml') {
+        for (let j = EndDate_index; j > StartDate_index-1; j--) {
+            if (Code === -1) {
+                temCode = rows[j].code;
+            }
+            if (Grid === -1) {
+                temGrid = rows[j].police_grid;
+            }
+            if (ID === -1) {
+                temID = rows[j].neighborhood_number;
+            }
+            if (rows[j].code === temCode && rows[j].police_grid === temGrid && rows[j].neighborhood_number == temID) {
+                var crime_case = {};
+                crime_case['date'] = rows[j].date_time.split('T')[0];
+                crime_case['time'] = rows[j].date_time.split('T')[1];
+                crime_case['code'] = rows[j].code;
+                crime_case['incident'] = rows[j].incident;
+                crime_case['police_grid'] = rows[j].police_grid;
+                crime_case['neighborhood_number'] = rows[j].neighborhood_number;
+                crime_case['block'] = rows[j].block;
+                crimeXML.INCIDENTS['I'+rows[j].case_number] = crime_case;
+                count++;
+                if (count === Limit) {
+                    return crimeXML;
+                }
+            }
+        }
+        return crimeXML;
+    }
+    
+    return null;
+}
+
+
 app.get('/incidents', (req, res) => {
     
     db.all("SELECT * FROM Incidents ORDER BY date_time", (err,rows) => {
-        
+        /*
         for (const prop in req.query) {
             console.log(req.query[prop]);
-        }
+        }*/
         var crime = {};
+        var crimeXML = {'INCIDENTS' : {}};
         
-        var result_start_date = rows[0].date_time.split('T')[0].split('-')[0] + 
-                                       rows[0].date_time.split('T')[0].split('-')[1] + 
-                                       rows[0].date_time.split('T')[0].split('-')[2];
-        var result_end_date = rows[rows.length-1].date_time.split('T')[0].split('-')[0] + 
-                             rows[rows.length-1].date_time.split('T')[0].split('-')[1] + 
-                             rows[rows.length-1].date_time.split('T')[0].split('-')[2];
+        var startIndex = []; // array contain all index of cases in the start_date
+        var endIndex = [];
+        var result_end_index = rows.length-1;
+        var result_start_index = result_end_index - 9999;
+        var database_start_date = rows[0].date_time.split('T')[0].split('-')[0] + 
+                                  rows[0].date_time.split('T')[0].split('-')[1] + 
+                                  rows[0].date_time.split('T')[0].split('-')[2];
+        var database_end_date = rows[rows.length-1].date_time.split('T')[0].split('-')[0] + 
+                                rows[rows.length-1].date_time.split('T')[0].split('-')[1] + 
+                                rows[rows.length-1].date_time.split('T')[0].split('-')[2];
         
-        
-        if (Object.getOwnPropertyNames(req.query).length > 0) {
-            if (req.query.hasOwnProperty('start_date')) {
-                
-                var inputSD = req.query.start_date.split('-'); // array of year, month, day
-                var result_start_index;
-                var result_end_index;
-                var startIndex = []; // array contain all index of cases in the start_date
-                
-                if (parseInt(inputSD[2]+inputSD[0]+inputSD[1]) < parseInt(result_start_date)) {
-                    result_start_index = 0;
+        // ?start_date
+        if (req.query.hasOwnProperty('start_date')) {
+            
+            var inputSD = req.query.start_date.split('-'); // array of year, month, day
+            
+            if (parseInt(inputSD[0]+inputSD[1]+inputSD[2], 10) < parseInt(database_start_date, 10)) {
+                result_start_index = 0;
+            }
+            
+            for (let i = 0; i < rows.length; i++) { // an array of index of start date 
+                var eachDate = rows[i].date_time.split('T')[0].split('-'); // array of year, month, day
+                if (parseInt(inputSD[0], 10) < parseInt(eachDate[0], 10)) {
+                    startIndex.push(i);
                 }
-                
-                for (let i = 0; i < rows.length; i++) { // an array of index of start date 
-                    var eachDate = rows[i].date_time.split('T')[0].split('-'); // array of year, month, day
-                    if (parseInt(inputSD[0]) < parseInt(eachDate[0])) {
+                else if (parseInt(inputSD[0], 10) === parseInt(eachDate[0], 10)) {
+                    if (parseInt(inputSD[1], 10) < parseInt(eachDate[1], 10)) {
                         startIndex.push(i);
                     }
-                    else if (parseInt(inputSD[0]) === parseInt(eachDate[0])) {
-                        if (parseInt(inputSD[1]) < parseInt(eachDate[1])) {
+                    else if (parseInt(inputSD[1], 10) === parseInt(eachDate[1], 10)) {
+                        if (parseInt(inputSD[2], 10) <= parseInt(eachDate[2], 10)) {
                             startIndex.push(i);
                         }
-                        else if (parseInt(inputSD[1]) === parseInt(eachDate[1])) {
-                            if (parseInt(inputSD[2]) <= parseInt(eachDate[2])) {
-                                startIndex.push(i);
-                            }
-                        }
                     }
-                     
                 }
-                result_start_index = startIndex[0];
-                /////////////////////////////////////////////////////////s
+            }
+            if (startIndex.length !== 0 && !req.query.hasOwnProperty('end_date')) { // start date between or before the dates in database
+                result_start_index = startIndex[0]; // the index of first case in the start date
                 if (result_start_index + 9999 >= rows.length) {
-                    result_end_index = rows.length - 1;
+                result_end_index = rows.length - 1;
                 }
                 else {
                     result_end_index = result_start_index + 9999;
                 }
-                //var count = 0;
-                for (let j = result_end_index; j > result_start_index-1; j--) {
-                    var crime_case = {};
-                    crime_case['date'] = rows[j].date_time.split('T')[0];
-                    crime_case['time'] = rows[j].date_time.split('T')[1];
-                    crime_case['code'] = rows[j].code;
-                    crime_case['incident'] = rows[j].incident;
-                    crime_case['police_grid'] = rows[j].police_grid;
-                    crime_case['neighborhood_number'] = rows[j].neighborhood_number;
-                    crime_case['block'] = rows[j].block;
-                    crime['I'+rows[j].case_number] = crime_case;
-                }
-                res.type('json').send(JSON.stringify(crime, null, 4));
-                //}  
+            }
+        }
+        // error no start date
+        
+        // ?end_date
+        if (req.query.hasOwnProperty('end_date')) {
+            
+            var inputED = req.query.end_date.split('-'); // array of year, month, day
+            
+            if (parseInt(inputED[0]+inputED[1]+inputED[2], 10) > parseInt(database_end_date, 10)) {
+                result_end_index = rows.length-1;
             }
             
-            
-            
-            
-            
-            else if (req.query.hasOwnProperty('end_date')) {
-                var input = req.query.end_date.split('-'); // array of month, day, year
-                
-                if (parseInt(input[2]+input[0]+input[1]) < parseInt(crime_start_date) || parseInt(input[2]+input[0]+input[1]) > parseInt(crime_end_date)) {
-                    res.status(500).send('Error: No such end date');
+            for (let i = 0; i < rows.length; i++) { 
+                var eachDate = rows[i].date_time.split('T')[0].split('-'); // array of year, month, day
+                if (parseInt(inputED[0], 10) > parseInt(eachDate[0], 10)) {
+                    endIndex.push(i);
+                }
+                else if (parseInt(inputED[0], 10) === parseInt(eachDate[0], 10)) {
+                    if (parseInt(inputED[1], 10) > parseInt(eachDate[1], 10)) {
+                        endIndex.push(i);
+                    }
+                    else if (parseInt(inputED[1], 10) === parseInt(eachDate[1], 10)) {
+                        if (parseInt(inputED[2], 10) >= parseInt(eachDate[2], 10)) {
+                            endIndex.push(i);
+                        }
+                    }
+                }
+            }
+            if (endIndex.length !== 0 && !req.query.hasOwnProperty('start_date')) { // start date between or after the dates in database
+                result_end_index = startIndex[0]; // the index of first case in the start date
+                if (result_end_index - 9999 <= rows.length) {
+                    result_start_index_index = 0;
                 }
                 else {
-                    var end_index;  // the index of last case in the end_date
-                    var firstIndex; // the first index of case in results
-                    for (let i = 0; i < rows.length; i++) {
-                        var eachDate = rows[i].date_time.split('T')[0].split('-'); // array of year, month, day
-                        if (input[0] === eachDate[1] && input[1] === eachDate[2] && input[2] === eachDate[0]) {
-                            end_index = i;
-                        }
-                    }
-                    if (end_index - 9999 < 0) {
-                        firstIndex = 0;
-                    }
-                    else {
-                        firstIndex = end_index - 9999;
-                    }
-                    for (let j = end_index; j > firstIndex-1; j--) {
-                        var crime_case = {};
-                        crime_case['date'] = rows[j].date_time.split('T')[0];
-                        crime_case['time'] = rows[j].date_time.split('T')[1];
-                        crime_case['code'] = rows[j].code;
-                        crime_case['incident'] = rows[j].incident;
-                        crime_case['police_grid'] = rows[j].police_grid;
-                        crime_case['neighborhood_number'] = rows[j].neighborhood_number;
-                        crime_case['block'] = rows[j].block;
-                        //crime_case['count'] = count;
-                        crime['I'+rows[j].case_number] = crime_case;
-                    }
-                    res.type('json').send(JSON.stringify(crime, null, 4));
+                    result_start_index_index = result_end_index - 9999;
                 }
             }
-            else if (req.query.hasOwnProperty('code')) {
-                var input = req.query.code.split(',');
-                var min = parseInt(input[0], 10);
-                var max = parseInt(input[1], 10);
-                var count = 0;
-                for (let i = rows.length-1; i > -1; i--) {
-                    var crime_case = {};
-                    if (count < 10000) {
-                        if (rows[i].code >= min && rows[i].code <= max) {
-                            crime_case['date'] = rows[i].date_time.split('T')[0];
-                            crime_case['time'] = rows[i].date_time.split('T')[1];
-                            crime_case['code'] = rows[i].code;
-                            crime_case['incident'] = rows[i].incident;
-                            crime_case['police_grid'] = rows[i].police_grid;
-                            crime_case['neighborhood_number'] = rows[i].neighborhood_number;
-                            crime_case['block'] = rows[i].block;
-                            //crime_case['count'] = count;
-                            count++;
-                            crime['I'+rows[i].case_number] = crime_case;
-                        }
-                    }
-                }
-                res.type('json').send(JSON.stringify(crime, null, 4));
-            }
-            else if (req.query.hasOwnProperty('grid')) {
-                var input = req.query.grid.split(',');
-                var min = parseInt(input[0], 10);
-                var max = parseInt(input[1], 10);
-                var count = 0;
-                for (let i = rows.length-1; i > -1; i--) {
-                    var crime_case = {};
-                    if (count < 10000) {
-                        if (rows[i].police_grid  >= min && rows[i].police_grid  <= max) {
-                            crime_case['date'] = rows[i].date_time.split('T')[0];
-                            crime_case['time'] = rows[i].date_time.split('T')[1].substring(0,rows[i].date_time.split('T')[1].length-4);
-                            crime_case['code'] = rows[i].code;
-                            crime_case['incident'] = rows[i].incident;
-                            crime_case['police_grid'] = rows[i].police_grid;
-                            crime_case['neighborhood_number'] = rows[i].neighborhood_number;
-                            crime_case['block'] = rows[i].block;
-                            //crime_case['count'] = count;
-                            count++;
-                            crime['I'+rows[i].case_number] = crime_case;
-                        }
-                    }
-                }
-                res.type('json').send(JSON.stringify(crime, null, 4));
-            }
-            else if (req.query.hasOwnProperty('id')) {
-                var input = req.query.id.split(',');
-                var min = parseInt(input[0], 10);
-                var max = parseInt(input[1], 10);
-                var count = 0;  
-                for (let i = rows.length-1; i > -1; i--) {
-                    var crime_case = {};
-                    if (count < 10000) {
-                        if (rows[i].neighborhood_number  >= min && rows[i].neighborhood_number  <= max) {
-                            crime_case['date'] = rows[i].date_time.split('T')[0];
-                            crime_case['time'] = rows[i].date_time.split('T')[1].substring(0,rows[i].date_time.split('T')[1].length-4);
-                            crime_case['code'] = rows[i].code;
-                            crime_case['incident'] = rows[i].incident;
-                            crime_case['police_grid'] = rows[i].police_grid;
-                            crime_case['neighborhood_number'] = rows[i].neighborhood_number;
-                            crime_case['block'] = rows[i].block;
-                            //crime_case['count'] = count;
-                            count++;
-                            crime['I'+rows[i].case_number] = crime_case;
-                        }
-                    }
-                }
-                res.type('json').send(JSON.stringify(crime, null, 4));
-            }
-            else if (req.query.hasOwnProperty('limit')) {
-                var input = parseInt(req.query.limit, 10);
-                var start_index = 0;  
-                if (rows.length - input > 0) {
-                    start_index = rows.length - input;
-                }
-                for (let i = rows.length-1; i > start_index-1; i--) {
-                    var crime_case = {};
-                    crime_case['date'] = rows[i].date_time.split('T')[0];
-                    crime_case['time'] = rows[i].date_time.split('T')[1].substring(0,rows[i].date_time.split('T')[1].length-4);
-                    crime_case['code'] = rows[i].code;
-                    crime_case['incident'] = rows[i].incident;
-                    crime_case['police_grid'] = rows[i].police_grid;
-                    crime_case['neighborhood_number'] = rows[i].neighborhood_number;
-                    crime_case['block'] = rows[i].block;
-                    crime['I'+rows[i].case_number] = crime_case;
-                }
-                res.type('json').send(JSON.stringify(crime, null, 4));
-            }
-            else if (req.query.hasOwnProperty('format')) {
-                var iXML = {'INCIDENTS' : {}}
-                var start_index = 0;
-                if (rows.length - 10000 >= 0) {
-                    start_index = rows.length - 10000;
-                }
-                for (let i = rows.length-1; i > start_index-1; i--) {
-                    var crime_case = {};
-                    crime_case['date'] = rows[i].date_time.split('T')[0];
-                    crime_case['time'] = rows[i].date_time.split('T')[1].substring(0,rows[i].date_time.split('T')[1].length-4);
-                    crime_case['code'] = rows[i].code;
-                    crime_case['incident'] = rows[i].incident;
-                    crime_case['police_grid'] = rows[i].police_grid;
-                    crime_case['neighborhood_number'] = rows[i].neighborhood_number;
-                    crime_case['block'] = rows[i].block;
-                    iXML.INCIDENTS['I'+rows[i].case_number] = crime_case;
-                }
-                if (req.query.format === 'xml') {
-                    var options = {compact: true, spaces: 4};
-                    var result = convert.js2xml(iXML,options);
-                    res.type('xml').send(result);
-                }
+        }
+        
+        // ?code
+        var codeVar;
+        var countCode = 0;
+        if (req.query.hasOwnProperty('code')) {
+            var inputCODE = req.query.code.split(',');
+            codeVar = [];
+            for (let i = inputCODE.length; i > -1; i--) {
+                codeVar.push(parseInt(inputCODE[i], 10));
             }
         }
         else {
-            var start_index = 0;  
-            if (rows.length - 10000 > 0) {
-                start_index = rows.length - 10000;
-            }
-            for (let i = rows.length-1; i > start_index-1; i--) {
-                var crime_case = {};
-                crime_case['date'] = rows[i].date_time.split('T')[0];
-                crime_case['time'] = rows[i].date_time.split('T')[1].substring(0,rows[i].date_time.split('T')[1].length-4);
-                crime_case['code'] = rows[i].code;
-                crime_case['incident'] = rows[i].incident;
-                crime_case['police_grid'] = rows[i].police_grid;
-                crime_case['neighborhood_number'] = rows[i].neighborhood_number;
-                crime_case['block'] = rows[i].block;
-                crime['I'+rows[i].case_number] = crime_case;
-            }
-            res.type('json').send(JSON.stringify(crime, null, 4));
+            codeVar = -1;
         }
+        
+        // ?grid
+        var gridVar;
+        var countGrid = 0;
+        if (req.query.hasOwnProperty('grid')) {
+            var inputGRID = req.query.grid.split(',');
+            gridVar = [];
+            for (let i = rows.length-1; i > -1; i--) {
+                gridVar.push(parseInt(inputGRID[i], 10));
+            }
+        }
+        else {
+            gridVar = -1;
+        }
+        
+        // ?id
+        var IDVar;
+        var countID = 0;
+        if (req.query.hasOwnProperty('id')) {
+            var inputID = req.query.id.split(',');
+            IDVar = [];
+            for (let i = rows.length-1; i > -1; i--) {
+                IDVar.push(parseInt(inputID[i], 10));
+            }
+        }
+        else {
+            IDVar = -1;
+        }
+        
+        // ?limit
+        var limitVar;
+        if (req.query.hasOwnProperty('limit')) {
+            limitVar = parseInt(req.query.limit, 10);
+        }
+        else {
+            limitVar = 10000;
+        }
+        
+        // ?format
+        var formatVar;
+        if (req.query.hasOwnProperty('format')) {
+            formatVar = req.query.format;
+        }
+        else {
+            formatVar = 'json';
+        }
+        
+        var afterFilter = filterIncident(result_start_index, result_end_index, codeVar, gridVar, IDVar, limitVar, formatVar, rows);
+        
+        if (afterFilter === null) {
+            res.status(500).send('Error: Failed filtering');
+        }
+        else if (formatVar === 'json') {
+            res.type('json').send(JSON.stringify(afterFilter, null, 4));
+        }
+        else if (formatVar === 'xml') {
+            var options = {compact: true, spaces: 4};
+            var result = convert.js2xml(afterFilter, options);
+            res.type('xml').send(result);
+        }
+        
     });
 });
 
