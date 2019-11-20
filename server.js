@@ -562,12 +562,12 @@ app.put('/new-incident', (req, res) => {
     var has_id = false;
     db.all("SELECT * FROM Incidents ORDER BY date_time", (err,rows) => {
         for (let i = 0; i < rows.length; i++) {
-            if (rows[i].case_number===req.body.case_number) {
+            if (rows[i].case_number === req.body.case_number) {
                 has_id = true;
             }
         }
         if (has_id) {
-            res.status(500).send('Error: case number already exists');
+            res.status(500).send('Error: Case number already exists');
         }
         else {
             // Adding the item
@@ -576,7 +576,13 @@ app.put('/new-incident', (req, res) => {
             (case_number,date_time,code,incident,police_grid,neighborhood_number,block)
             */
             db.run('INSERT INTO Incidents (case_number, date_time, code, incident, police_grid, neighborhood_number, block) VALUES ( ?, ?, ?, ?, ?, ?, ?)',
-            [req.body.case_number,req.body.date + 'T' +req.body.time,req.body.code,req.body.incident,req.body.police_grid,req.body.neighborhood_number,req.body.block], (err) => {
+                  [req.body.case_number,
+                   req.body.date + 'T' +req.body.time,
+                   req.body.code,
+                   req.body.incident,
+                   req.body.police_grid,
+                   req.body.neighborhood_number,
+                   req.body.block], (err) => {
                 if (err) {
                     res.status(500).send(err);
                 } else {
@@ -586,6 +592,7 @@ app.put('/new-incident', (req, res) => {
         }
     });
 });
+
  
 
 var server = app.listen(port);
