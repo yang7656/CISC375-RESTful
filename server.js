@@ -156,8 +156,8 @@ function filterIncident(StartDate_index, EndDate_index, Limit, Format, rows) {
     var count = 0;
     var crime = {};
     var crimeXML = {'INCIDENTS' : {}};
-    console.log(EndDate_index);
-    console.log(StartDate_index);
+    //console.log(EndDate_index);
+    //console.log(StartDate_index);
     if (Format === 'json') {
         for (let j = EndDate_index; j > StartDate_index-1; j--) {
             var crime_case = {};
@@ -258,6 +258,7 @@ app.get('/incidents', (req, res) => {
     console.log(SQliteComment);
     
     db.all(SQliteComment, (err,rows) => {
+        
         if (rows.length === 0) {
             var response = {};
             var responseXML = {'INCIDENTS' : {}};
@@ -279,8 +280,8 @@ app.get('/incidents', (req, res) => {
             }
         }
         else {
+            
             var startIndex = []; // array contain all index of cases in the start_date
-
             var result_end_index = rows.length-1;
             var result_start_index = result_end_index - 9999;
             var database_start_date = rows[0].date_time.split('T')[0].split('-')[0] + 
@@ -363,7 +364,12 @@ app.get('/incidents', (req, res) => {
                 }
             }
             else {
-                result_end_index = result_start_index + 999;
+                if (result_start_index + 9999 <= rows.length-1) {
+                    result_end_index = result_start_index + 9999;
+                }
+                else {
+                    result_end_index = rows.length-1;
+                }
             }
             
             // ?limit
