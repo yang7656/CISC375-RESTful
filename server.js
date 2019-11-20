@@ -258,126 +258,146 @@ app.get('/incidents', (req, res) => {
     console.log(SQliteComment);
     
     db.all(SQliteComment, (err,rows) => {
-        console.log(rows);
-        var startIndex = []; // array contain all index of cases in the start_date
-
-        var result_end_index = rows.length-1;
-        var result_start_index = result_end_index - 9999;
-        var database_start_date = rows[0].date_time.split('T')[0].split('-')[0] + 
-                                  rows[0].date_time.split('T')[0].split('-')[1] + 
-                                  rows[0].date_time.split('T')[0].split('-')[2];
-        var database_end_date = rows[rows.length-1].date_time.split('T')[0].split('-')[0] + 
-                                rows[rows.length-1].date_time.split('T')[0].split('-')[1] + 
-                                rows[rows.length-1].date_time.split('T')[0].split('-')[2];
-        
-        // ?start_date
-        if (req.query.hasOwnProperty('start_date')) {
-            
-            var inputSD = req.query.start_date.split('-'); // array of year, month, day
-            
-            if (parseInt(inputSD[0]+inputSD[1]+inputSD[2], 10) < parseInt(database_start_date, 10)) {
-                result_start_index = 0;
+        if (rows.length === 0) {
+            var response = {};
+            var responseXML = {'INCIDENTS' : {}};
+            if (!req.query.hasOwnProperty('format')) {
+                res.type('json').send(JSON.stringify(response, null, 4));
             }
-            
-            for (let i = 0; i < rows.length; i++) { // an array of index of start date 
-                var eachDate = rows[i].date_time.split('T')[0].split('-'); // array of year, month, day
-                if (parseInt(inputSD[0], 10) < parseInt(eachDate[0], 10)) {
-                    startIndex.push(i);
+            else {
+                if (req.query.format === 'xml') {
+                    var options = {compact: true, spaces: 4};
+                    var result = convert.js2xml(responseXML, options);
+                    res.type('xml').send(result);
                 }
-                else if (parseInt(inputSD[0], 10) === parseInt(eachDate[0], 10)) {
-                    if (parseInt(inputSD[1], 10) < parseInt(eachDate[1], 10)) {
-                        startIndex.push(i);
-                    }
-                    else if (parseInt(inputSD[1], 10) === parseInt(eachDate[1], 10)) {
-                        if (parseInt(inputSD[2], 10) <= parseInt(eachDate[2], 10)) {
-                            startIndex.push(i);
-                        }
-                    }
+                else if (req.query.format === 'json') {
+                    res.type('json').send(JSON.stringify(response, null, 4));
                 }
-            }
-            if (startIndex.length !== 0) { // start date between or before the dates in database
-                result_start_index = startIndex[0]; // the index of first case in the start date
+                else {
+                    res.status(500).send('Error: No such format');
+                }
             }
         }
         else {
-            if (result_start_index < 0) {
-                result_start_index = 0;
-            }
-        }
-        // error no start date
-        
-        // ?end_date
-        var endIndex = [];
-        if (req.query.hasOwnProperty('end_date')) {
+            var startIndex = []; // array contain all index of cases in the start_date
+
+            var result_end_index = rows.length-1;
+            var result_start_index = result_end_index - 9999;
+            var database_start_date = rows[0].date_time.split('T')[0].split('-')[0] + 
+                                      rows[0].date_time.split('T')[0].split('-')[1] + 
+                                      rows[0].date_time.split('T')[0].split('-')[2];
+            var database_end_date = rows[rows.length-1].date_time.split('T')[0].split('-')[0] + 
+                                    rows[rows.length-1].date_time.split('T')[0].split('-')[1] + 
+                                    rows[rows.length-1].date_time.split('T')[0].split('-')[2];
             
-            var inputED = req.query.end_date.split('-'); // array of year, month, day
-            
-            if (parseInt(inputED[0]+inputED[1]+inputED[2], 10) > parseInt(database_end_date, 10)) {
-                result_end_index = rows.length-1;
-            }
-            
-            for (let i = 0; i < rows.length; i++) { 
-                var eachDate = rows[i].date_time.split('T')[0].split('-'); // array of year, month, day
-                if (parseInt(inputED[0], 10) > parseInt(eachDate[0], 10)) {
-                    endIndex.push(i);
+            // ?start_date
+            if (req.query.hasOwnProperty('start_date')) {
+                
+                var inputSD = req.query.start_date.split('-'); // array of year, month, day
+                
+                if (parseInt(inputSD[0]+inputSD[1]+inputSD[2], 10) < parseInt(database_start_date, 10)) {
+                    result_start_index = 0;
                 }
-                else if (parseInt(inputED[0], 10) === parseInt(eachDate[0], 10)) {
-                    if (parseInt(inputED[1], 10) > parseInt(eachDate[1], 10)) {
-                        endIndex.push(i);
+                
+                for (let i = 0; i < rows.length; i++) { // an array of index of start date 
+                    var eachDate = rows[i].date_time.split('T')[0].split('-'); // array of year, month, day
+                    if (parseInt(inputSD[0], 10) < parseInt(eachDate[0], 10)) {
+                        startIndex.push(i);
                     }
-                    else if (parseInt(inputED[1], 10) === parseInt(eachDate[1], 10)) {
-                        if (parseInt(inputED[2], 10) >= parseInt(eachDate[2], 10)) {
-                            endIndex.push(i);
+                    else if (parseInt(inputSD[0], 10) === parseInt(eachDate[0], 10)) {
+                        if (parseInt(inputSD[1], 10) < parseInt(eachDate[1], 10)) {
+                            startIndex.push(i);
+                        }
+                        else if (parseInt(inputSD[1], 10) === parseInt(eachDate[1], 10)) {
+                            if (parseInt(inputSD[2], 10) <= parseInt(eachDate[2], 10)) {
+                                startIndex.push(i);
+                            }
                         }
                     }
                 }
+                if (startIndex.length !== 0) { // start date between or before the dates in database
+                    result_start_index = startIndex[0]; // the index of first case in the start date
+                }
             }
-            if (endIndex.length !== 0) { // start date between or after the dates in database
-                result_end_index = endIndex[endIndex.length-1]; // the index of first case in the start date
-            }
-            if (!req.query.hasOwnProperty('start_date')) {
-                result_start_index = result_end_index - 9999;
+            else {
                 if (result_start_index < 0) {
                     result_start_index = 0;
                 }
             }
+            // error no start date
+            
+            // ?end_date
+            var endIndex = [];
+            if (req.query.hasOwnProperty('end_date')) {
+                
+                var inputED = req.query.end_date.split('-'); // array of year, month, day
+                
+                if (parseInt(inputED[0]+inputED[1]+inputED[2], 10) > parseInt(database_end_date, 10)) {
+                    result_end_index = rows.length-1;
+                }
+                
+                for (let i = 0; i < rows.length; i++) { 
+                    var eachDate = rows[i].date_time.split('T')[0].split('-'); // array of year, month, day
+                    if (parseInt(inputED[0], 10) > parseInt(eachDate[0], 10)) {
+                        endIndex.push(i);
+                    }
+                    else if (parseInt(inputED[0], 10) === parseInt(eachDate[0], 10)) {
+                        if (parseInt(inputED[1], 10) > parseInt(eachDate[1], 10)) {
+                            endIndex.push(i);
+                        }
+                        else if (parseInt(inputED[1], 10) === parseInt(eachDate[1], 10)) {
+                            if (parseInt(inputED[2], 10) >= parseInt(eachDate[2], 10)) {
+                                endIndex.push(i);
+                            }
+                        }
+                    }
+                }
+                if (endIndex.length !== 0) { // start date between or after the dates in database
+                    result_end_index = endIndex[endIndex.length-1]; // the index of first case in the start date
+                }
+                if (!req.query.hasOwnProperty('start_date')) {
+                    result_start_index = result_end_index - 9999;
+                    if (result_start_index < 0) {
+                        result_start_index = 0;
+                    }
+                }
+            }
+            else {
+                result_end_index = result_start_index + 999;
+            }
+            
+            // ?limit
+            var limitVar;
+            if (req.query.hasOwnProperty('limit')) {
+                limitVar = parseInt(req.query.limit, 10);
+            }
+            else {
+                limitVar = 10000;
+            }
+            
+            // ?format
+            var formatVar;
+            if (req.query.hasOwnProperty('format')) {
+                formatVar = req.query.format;
+            }
+            else {
+                formatVar = 'json';
+            }
+            
+            var afterFilter = filterIncident(result_start_index, result_end_index, limitVar, formatVar, rows);
+            
+            if (afterFilter === null) {
+                res.status(500).send('Error: No such format');
+            }
+            else if (formatVar === 'json') {
+                res.type('json').send(JSON.stringify(afterFilter, null, 4));
+            }
+            else if (formatVar === 'xml') {
+                var options = {compact: true, spaces: 4};
+                var result = convert.js2xml(afterFilter, options);
+                res.type('xml').send(result);
+            }
         }
-        else {
-            result_end_index = result_start_index + 999;
-        }
-        
-        // ?limit
-        var limitVar;
-        if (req.query.hasOwnProperty('limit')) {
-            limitVar = parseInt(req.query.limit, 10);
-        }
-        else {
-            limitVar = 10000;
-        }
-        
-        // ?format
-        var formatVar;
-        if (req.query.hasOwnProperty('format')) {
-            formatVar = req.query.format;
-        }
-        else {
-            formatVar = 'json';
-        }
-        
-        var afterFilter = filterIncident(result_start_index, result_end_index, limitVar, formatVar, rows);
-        
-        if (afterFilter === null) {
-            res.status(500).send('Error: Failed filtering');
-        }
-        else if (formatVar === 'json') {
-            res.type('json').send(JSON.stringify(afterFilter, null, 4));
-        }
-        else if (formatVar === 'xml') {
-            var options = {compact: true, spaces: 4};
-            var result = convert.js2xml(afterFilter, options);
-            res.type('xml').send(result);
-        }
-        
     });
     
 });   
