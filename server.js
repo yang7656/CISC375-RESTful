@@ -31,7 +31,6 @@ app.get('/codes', (req, res) => {
         
         var crime = {};
         var crimeXML = {'CODES' : {}};
-        var count = -1;
         
         // code
         if (req.query.hasOwnProperty('code')) {
@@ -45,12 +44,24 @@ app.get('/codes', (req, res) => {
                     if (rows[i].code === codeInt[k]) {
                         crimeXML.CODES['C'+rows[i].code] = rows[i].incident_type;
                         crime['C'+rows[i].code] = rows[i].incident_type;
-                        count++;
                     }
                 }
             }
             if (!req.query.hasOwnProperty('format')) {
                 res.type('json').send(JSON.stringify(crime, null, 4));
+            }
+            else {
+                if (req.query.format === 'xml') {
+                    var options = {compact: true, spaces: 4};
+                    var result = convert.js2xml(crimeXML, options);
+                    res.type('xml').send(result);
+                }
+                else if (req.query.format === 'json') {
+                    res.type('json').send(JSON.stringify(crime, null, 4));
+                }
+                else {
+                    res.status(500).send('Error: No such format');
+                }
             }
         }   
         else { // no code
@@ -61,30 +72,20 @@ app.get('/codes', (req, res) => {
             if (!req.query.hasOwnProperty('format')) {
                 res.type('json').send(JSON.stringify(crime, null, 4));
             }
-        }
-        
-        // format
-        if (count < 0 && req.query.hasOwnProperty('code')) {
-            res.status(500).send('Error: Cannot find any of code(s)');
-        }
-        else {
-            if (req.query.hasOwnProperty('format')){
-                if (req.query.format === 'xml' || req.query.format === 'json') {
-                    if (req.query.format === 'xml') {
-                        var options = {compact: true, spaces: 4};
-                        var result = convert.js2xml(crimeXML, options);
-                        res.type('xml').send(result);
-                    }
-                    if (req.query.format === 'json') {
-                        res.type('json').send(JSON.stringify(crime, null, 4));
-                    }
+            else {
+                if (req.query.format === 'xml') {
+                    var options = {compact: true, spaces: 4};
+                    var result = convert.js2xml(crimeXML, options);
+                    res.type('xml').send(result);
+                }
+                else if (req.query.format === 'json') {
+                    res.type('json').send(JSON.stringify(crime, null, 4));
                 }
                 else {
                     res.status(500).send('Error: No such format');
                 }
             }
         }
-        
     });
 });
 
@@ -94,7 +95,6 @@ app.get('/neighborhoods', (req, res) => {
         
         var crime = {};
         var crimeXML = {'NEIGHBORHOOD' : {}};
-        var count = -1;
         
         // id
         if (req.query.hasOwnProperty('id')) {
@@ -108,12 +108,24 @@ app.get('/neighborhoods', (req, res) => {
                     if (rows[i].neighborhood_number === idInt[k]) {
                         crimeXML.NEIGHBORHOOD['N'+rows[i].neighborhood_number] = rows[i].neighborhood_name;
                         crime['N'+rows[i].neighborhood_number] = rows[i].neighborhood_name;
-                        count++;
                     }
                 }
             }
             if (!req.query.hasOwnProperty('format')) {
                 res.type('json').send(JSON.stringify(crime, null, 4));
+            }
+            else {
+                if (req.query.format === 'xml') {
+                    var options = {compact: true, spaces: 4};
+                    var result = convert.js2xml(crimeXML, options);
+                    res.type('xml').send(result);
+                }
+                else if (req.query.format === 'json') {
+                    res.type('json').send(JSON.stringify(crime, null, 4));
+                }
+                else {
+                    res.status(500).send('Error: No such format');
+                }
             }
         }   
         else { // no id
@@ -124,30 +136,20 @@ app.get('/neighborhoods', (req, res) => {
             if (!req.query.hasOwnProperty('format')) {
                 res.type('json').send(JSON.stringify(crime, null, 4));
             }
-        }
-        
-        // format
-        if (count < 0 && req.query.hasOwnProperty('id')) {
-            res.status(500).send('Error: Cannot find any of code(s)');
-        }
-        else {
-            if (req.query.hasOwnProperty('format')){
-                if (req.query.format === 'xml' || req.query.format === 'json') {
-                    if (req.query.format === 'xml') {
-                        var options = {compact: true, spaces: 4};
-                        var result = convert.js2xml(crimeXML, options);
-                        res.type('xml').send(result);
-                    }
-                    if (req.query.format === 'json') {
-                        res.type('json').send(JSON.stringify(crime, null, 4));
-                    }
+            else {
+                if (req.query.format === 'xml') {
+                    var options = {compact: true, spaces: 4};
+                    var result = convert.js2xml(crimeXML, options);
+                    res.type('xml').send(result);
+                }
+                else if (req.query.format === 'json') {
+                    res.type('json').send(JSON.stringify(crime, null, 4));
                 }
                 else {
                     res.status(500).send('Error: No such format');
                 }
             }
         }
-        
     });
 });
 
@@ -165,8 +167,9 @@ app.get('/incidents', (req, res) => {
             
             SQliteComment = SQliteComment + "(";
             for (let i = 0; i < inputCODE.length; i++) {
-                SQliteComment = SQliteComment + "code = " + inputCODE[i] + " OR ";
-            
+                if (parseInt(inputCODE[i],10).toString() !== 'NaN') {
+                    SQliteComment = SQliteComment + "code = " + parseInt(inputCODE[i],10) + " OR ";
+                }
             }
             SQliteComment = SQliteComment.substring(0, SQliteComment.length-4) + ") ";
             
@@ -181,8 +184,9 @@ app.get('/incidents', (req, res) => {
             SQliteComment = SQliteComment + "(";
             
             for (let i = 0; i < inputGRID.length; i++) {
-                SQliteComment = SQliteComment + "police_grid = " + inputGRID[i] + " OR ";
-            
+                if (parseInt(inputGRID[i],10).toString() !== 'NaN') {
+                    SQliteComment = SQliteComment + "police_grid = " + parseInt(inputGRID[i],10) + " OR ";
+                }
             }
             SQliteComment = SQliteComment.substring(0, SQliteComment.length-4) + ") ";
             
@@ -197,8 +201,9 @@ app.get('/incidents', (req, res) => {
             
             SQliteComment = SQliteComment + "(";
             for (let i = 0; i < inputID.length; i++) {
-                SQliteComment = SQliteComment + "neighborhood_number = " + inputID[i] + " OR ";
-            
+                if (parseInt(inputID[i],10).toString() !== 'NaN') {
+                    SQliteComment = SQliteComment + "neighborhood_number = " + parseInt(inputID[i],10) + " OR ";
+                }
             }
             SQliteComment = SQliteComment.substring(0, SQliteComment.length-4) + ") ";
         }
@@ -256,16 +261,19 @@ app.get('/incidents', (req, res) => {
             if (req.query.hasOwnProperty('end_date')) {
                 
                 var inputED = new Date(req.query.end_date);
-                let laterIndex = [];
                 
                 if (!req.query.hasOwnProperty('start_date')) {
+                    var tem = [];
                     for (let i = 0; i < afterFilter.length; i++) { // an array of index of start date 
                         var eachDate = new Date(afterFilter[i].date_time.split('T')[0]);
-                        if (inputED.getTime() < eachDate.getTime()) {
-                            laterIndex.push(i);
+                        if (inputED.getTime() >= eachDate.getTime()) {
+                            tem.push(afterFilter[i]);
                         }
                     }
-                    afterFilter.splice(laterIndex[0],afterFilter.length-laterIndex[0]);
+                    afterFilter.splice(0,afterFilter.length);
+                    for (let k = 0; k < tem.length; k++) {
+                        afterFilter.push(tem[k]);
+                    }
                 }
                 else {
                     var startDate = new Date(req.query.start_date);
@@ -274,17 +282,19 @@ app.get('/incidents', (req, res) => {
                         res.status(500).send('Error: Start date is later than end date');
                     }
                     else {
-                        
+                        var tem = [];
                         for (let i = 0; i < afterFilter.length; i++) { // an array of index of start date 
                             var eachDate = new Date(afterFilter[i].date_time.split('T')[0]);
-                            if (inputED.getTime() < eachDate.getTime()) {
-                                laterIndex.push(i);
+                            if (inputED.getTime() >= eachDate.getTime()) {
+                                tem.push(afterFilter[i]);
                             }
                         }
-                        afterFilter.splice(laterIndex[0],afterFilter.length-laterIndex[0]);
+                        afterFilter.splice(0,afterFilter.length);
+                        for (let k = 0; k < tem.length; k++) {
+                            afterFilter.push(tem[k]);
+                        }
                     }
                 }
-                
             }
             
             if (!startLater) {
@@ -311,7 +321,7 @@ app.get('/incidents', (req, res) => {
                 else {
                     formatVar = 'json';
                 }
-                var count = 0;
+                //var count = 0;
                 for (let j = afterFilter.length-1; j > -1 ; j--) {
                     var crime_case = {};
                     crime_case['date'] = afterFilter[j].date_time.split('T')[0];
@@ -321,10 +331,10 @@ app.get('/incidents', (req, res) => {
                     crime_case['police_grid'] = afterFilter[j].police_grid;
                     crime_case['neighborhood_number'] = afterFilter[j].neighborhood_number;
                     crime_case['block'] = afterFilter[j].block;
-                    crime_case['count'] = count;
+                    //crime_case['count'] = count;
                     crime['I'+afterFilter[j].case_number] = crime_case;
                     crimeXML.INCIDENTS['I'+afterFilter[j].case_number] = crime_case;
-                    count++;
+                    //count++;
                 }
                 
                 if (formatVar === 'json') {
@@ -334,6 +344,9 @@ app.get('/incidents', (req, res) => {
                     var options = {compact: true, spaces: 4};
                     var result = convert.js2xml(crimeXML, options);
                     res.type('xml').send(result);
+                }
+                else {
+                    res.status(500).send('Error: No such format');
                 }
             }
         }
