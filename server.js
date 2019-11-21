@@ -151,57 +151,6 @@ app.get('/neighborhoods', (req, res) => {
     });
 });
 
-function filterIncident(StartDate_index, EndDate_index, Limit, Format, rows) {
-   
-    var count = 0;
-    var crime = {};
-    var crimeXML = {'INCIDENTS' : {}};
-    //console.log(EndDate_index);
-    //console.log(StartDate_index);
-    if (Format === 'json') {
-        for (let j = EndDate_index; j > StartDate_index-1; j--) {
-            var crime_case = {};
-            crime_case['date'] = rows[j].date_time.split('T')[0];
-            crime_case['time'] = rows[j].date_time.split('T')[1];
-            crime_case['code'] = rows[j].code;
-            crime_case['incident'] = rows[j].incident;
-            crime_case['police_grid'] = rows[j].police_grid;
-            crime_case['neighborhood_number'] = rows[j].neighborhood_number;
-            crime_case['block'] = rows[j].block;
-            crime_case['count'] = count;
-            crime['I'+rows[j].case_number] = crime_case;
-            count++;
-            if (count === Limit) {
-                return crime;
-            }
-        }
-        return crime;
-    }
-    
-    if (Format === 'xml') {
-        for (let j = EndDate_index; j > StartDate_index-1; j--) {
-            var crime_case = {};
-            crime_case['date'] = rows[j].date_time.split('T')[0];
-            crime_case['time'] = rows[j].date_time.split('T')[1];
-            crime_case['code'] = rows[j].code;
-            crime_case['incident'] = rows[j].incident;
-            crime_case['police_grid'] = rows[j].police_grid;
-            crime_case['neighborhood_number'] = rows[j].neighborhood_number;
-            crime_case['block'] = rows[j].block;
-            crime_case['count'] = count;
-            crimeXML.INCIDENTS['I'+rows[j].case_number] = crime_case;
-            count++;
-            if (count === Limit) {
-                return crimeXML;
-            }
-        }
-        return crimeXML;
-    }
-    
-    return null;
-}
-
-
 app.get('/incidents', (req, res) => {
     
     var SQliteComment = "SELECT * FROM Incidents "; // + ORDER BY date_time
@@ -255,7 +204,6 @@ app.get('/incidents', (req, res) => {
         }
     }
     SQliteComment = SQliteComment + "ORDER BY date_time";
-    console.log(SQliteComment);
     
     db.all(SQliteComment, (err,rows) => {
         
@@ -279,310 +227,118 @@ app.get('/incidents', (req, res) => {
                 }
             }
         }
-        else {
+        else { // have data after filter of code, police_grid, and neighborhood_number
             
-            var startIndex = []; // array contain all index of cases in the start_date
-            var result_end_index = rows.length-1;
-            var result_start_index = result_end_index - 9999;
-            var database_start_date = rows[0].date_time.split('T')[0].split('-')[0] + 
-                                      rows[0].date_time.split('T')[0].split('-')[1] + 
-                                      rows[0].date_time.split('T')[0].split('-')[2];
-            var database_end_date = rows[rows.length-1].date_time.split('T')[0].split('-')[0] + 
-                                    rows[rows.length-1].date_time.split('T')[0].split('-')[1] + 
-                                    rows[rows.length-1].date_time.split('T')[0].split('-')[2];
+            var crime = {};
+            var crimeXML = {'INCIDENTS':{}};
+            var afterFilter = [];
+            var startLater = false;
             
             // ?start_date
             if (req.query.hasOwnProperty('start_date')) {
                 
-                var inputSD = req.query.start_date.split('-'); // array of year, month, day
-                
-                if (parseInt(inputSD[0]+inputSD[1]+inputSD[2], 10) < parseInt(database_start_date, 10)) {
-                    result_start_index = 0;
-                }
+                var inputSD = new Date(req.query.start_date);
                 
                 for (let i = 0; i < rows.length; i++) { // an array of index of start date 
-                    var eachDate = rows[i].date_time.split('T')[0].split('-'); // array of year, month, day
-                    if (parseInt(inputSD[0], 10) < parseInt(eachDate[0], 10)) {
-                        startIndex.push(i);
+                    var eachDate = new Date(rows[i].date_time.split('T')[0]);
+                    if (inputSD.getTime() <= eachDate.getTime()) {
+                        afterFilter.push(rows[i]);
                     }
-                    else if (parseInt(inputSD[0], 10) === parseInt(eachDate[0], 10)) {
-                        if (parseInt(inputSD[1], 10) < parseInt(eachDate[1], 10)) {
-                            startIndex.push(i);
-                        }
-                        else if (parseInt(inputSD[1], 10) === parseInt(eachDate[1], 10)) {
-                            if (parseInt(inputSD[2], 10) <= parseInt(eachDate[2], 10)) {
-                                startIndex.push(i);
-                            }
-                        }
-                    }
-                }
-                if (startIndex.length !== 0) { // start date between or before the dates in database
-                    result_start_index = startIndex[0]; // the index of first case in the start date
                 }
             }
             else {
-                if (result_start_index < 0) {
-                    result_start_index = 0;
+                for (let i = 0; i < rows.length; i++) { // an array of index of start date 
+                    afterFilter.push(rows[i]);
                 }
             }
-            // error no start date
             
             // ?end_date
-            var endIndex = [];
             if (req.query.hasOwnProperty('end_date')) {
                 
-                var inputED = req.query.end_date.split('-'); // array of year, month, day
+                var inputED = new Date(req.query.end_date);
+                let laterIndex = [];
                 
-                if (parseInt(inputED[0]+inputED[1]+inputED[2], 10) > parseInt(database_end_date, 10)) {
-                    result_end_index = rows.length-1;
-                }
-                
-                for (let i = 0; i < rows.length; i++) { 
-                    var eachDate = rows[i].date_time.split('T')[0].split('-'); // array of year, month, day
-                    if (parseInt(inputED[0], 10) > parseInt(eachDate[0], 10)) {
-                        endIndex.push(i);
-                    }
-                    else if (parseInt(inputED[0], 10) === parseInt(eachDate[0], 10)) {
-                        if (parseInt(inputED[1], 10) > parseInt(eachDate[1], 10)) {
-                            endIndex.push(i);
-                        }
-                        else if (parseInt(inputED[1], 10) === parseInt(eachDate[1], 10)) {
-                            if (parseInt(inputED[2], 10) >= parseInt(eachDate[2], 10)) {
-                                endIndex.push(i);
-                            }
-                        }
-                    }
-                }
-                if (endIndex.length !== 0) { // start date between or after the dates in database
-                    result_end_index = endIndex[endIndex.length-1]; // the index of first case in the start date
-                }
                 if (!req.query.hasOwnProperty('start_date')) {
-                    result_start_index = result_end_index - 9999;
-                    if (result_start_index < 0) {
-                        result_start_index = 0;
+                    for (let i = 0; i < afterFilter.length; i++) { // an array of index of start date 
+                        var eachDate = new Date(afterFilter[i].date_time.split('T')[0]);
+                        if (inputED.getTime() < eachDate.getTime()) {
+                            laterIndex.push(i);
+                        }
                     }
-                }
-            }
-            else {
-                if (result_start_index + 9999 <= rows.length-1) {
-                    result_end_index = result_start_index + 9999;
+                    afterFilter.splice(laterIndex[0],afterFilter.length-laterIndex[0]);
                 }
                 else {
-                    result_end_index = rows.length-1;
+                    var startDate = new Date(req.query.start_date);
+                    if (startDate.getTime() > inputED.getTime()) {
+                        startLater = true;
+                        res.status(500).send('Error: Start date is later than end date');
+                    }
+                    else {
+                        
+                        for (let i = 0; i < afterFilter.length; i++) { // an array of index of start date 
+                            var eachDate = new Date(afterFilter[i].date_time.split('T')[0]);
+                            if (inputED.getTime() < eachDate.getTime()) {
+                                laterIndex.push(i);
+                            }
+                        }
+                        afterFilter.splice(laterIndex[0],afterFilter.length-laterIndex[0]);
+                    }
                 }
+                
             }
             
-            // ?limit
-            var limitVar;
-            if (req.query.hasOwnProperty('limit')) {
-                limitVar = parseInt(req.query.limit, 10);
-            }
-            else {
-                limitVar = 10000;
-            }
-            
-            // ?format
-            var formatVar;
-            if (req.query.hasOwnProperty('format')) {
-                formatVar = req.query.format;
-            }
-            else {
-                formatVar = 'json';
-            }
-            
-            var afterFilter = filterIncident(result_start_index, result_end_index, limitVar, formatVar, rows);
-            
-            if (afterFilter === null) {
-                res.status(500).send('Error: No such format');
-            }
-            else if (formatVar === 'json') {
-                res.type('json').send(JSON.stringify(afterFilter, null, 4));
-            }
-            else if (formatVar === 'xml') {
-                var options = {compact: true, spaces: 4};
-                var result = convert.js2xml(afterFilter, options);
-                res.type('xml').send(result);
+            if (!startLater) {
+                
+                // ?limit
+                var limitVar;
+                if (req.query.hasOwnProperty('limit')) {
+                    limitVar = parseInt(req.query.limit, 10);
+                    if (limitVar <= afterFilter.length) {
+                        afterFilter.splice(0, afterFilter.length-limitVar);
+                    }
+                }
+                else {
+                    if (afterFilter.length >= 10000) {
+                        afterFilter.splice(0, afterFilter.length-10000);
+                    }
+                }
+                
+                // ?format
+                var formatVar;
+                if (req.query.hasOwnProperty('format')) {
+                    formatVar = req.query.format;
+                }
+                else {
+                    formatVar = 'json';
+                }
+                var count = 0;
+                for (let j = afterFilter.length-1; j > -1 ; j--) {
+                    var crime_case = {};
+                    crime_case['date'] = afterFilter[j].date_time.split('T')[0];
+                    crime_case['time'] = afterFilter[j].date_time.split('T')[1];
+                    crime_case['code'] = afterFilter[j].code;
+                    crime_case['incident'] = afterFilter[j].incident;
+                    crime_case['police_grid'] = afterFilter[j].police_grid;
+                    crime_case['neighborhood_number'] = afterFilter[j].neighborhood_number;
+                    crime_case['block'] = afterFilter[j].block;
+                    crime_case['count'] = count;
+                    crime['I'+afterFilter[j].case_number] = crime_case;
+                    crimeXML.INCIDENTS['I'+afterFilter[j].case_number] = crime_case;
+                    count++;
+                }
+                
+                if (formatVar === 'json') {
+                    res.type('json').send(JSON.stringify(crime, null, 4));
+                }
+                else if (formatVar === 'xml') {
+                    var options = {compact: true, spaces: 4};
+                    var result = convert.js2xml(crimeXML, options);
+                    res.type('xml').send(result);
+                }
             }
         }
     });
-    
-});   
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    /*
-    db.all("SELECT * FROM Incidents ORDER BY date_time", (err,rows) => {
-        
-        var startIndex = []; // array contain all index of cases in the start_date
-        var endIndex = [];
-        var result_end_index = rows.length-1;
-        var result_start_index = result_end_index - 9999;
-        var database_start_date = rows[0].date_time.split('T')[0].split('-')[0] + 
-                                  rows[0].date_time.split('T')[0].split('-')[1] + 
-                                  rows[0].date_time.split('T')[0].split('-')[2];
-        var database_end_date = rows[rows.length-1].date_time.split('T')[0].split('-')[0] + 
-                                rows[rows.length-1].date_time.split('T')[0].split('-')[1] + 
-                                rows[rows.length-1].date_time.split('T')[0].split('-')[2];
-        
-        // ?start_date
-        if (req.query.hasOwnProperty('start_date')) {
-            
-            var inputSD = req.query.start_date.split('-'); // array of year, month, day
-            
-            if (parseInt(inputSD[0]+inputSD[1]+inputSD[2], 10) < parseInt(database_start_date, 10)) {
-                result_start_index = 0;
-            }
-            
-            for (let i = 0; i < rows.length; i++) { // an array of index of start date 
-                var eachDate = rows[i].date_time.split('T')[0].split('-'); // array of year, month, day
-                if (parseInt(inputSD[0], 10) < parseInt(eachDate[0], 10)) {
-                    startIndex.push(i);
-                }
-                else if (parseInt(inputSD[0], 10) === parseInt(eachDate[0], 10)) {
-                    if (parseInt(inputSD[1], 10) < parseInt(eachDate[1], 10)) {
-                        startIndex.push(i);
-                    }
-                    else if (parseInt(inputSD[1], 10) === parseInt(eachDate[1], 10)) {
-                        if (parseInt(inputSD[2], 10) <= parseInt(eachDate[2], 10)) {
-                            startIndex.push(i);
-                        }
-                    }
-                }
-            }
-            if (startIndex.length !== 0) { // start date between or before the dates in database
-                result_start_index = startIndex[0]; // the index of first case in the start date
-            }
-        }
-        // error no start date
-        
-        // ?end_date
-        if (req.query.hasOwnProperty('end_date')) {
-            
-            var inputED = req.query.end_date.split('-'); // array of year, month, day
-            
-            if (parseInt(inputED[0]+inputED[1]+inputED[2], 10) > parseInt(database_end_date, 10)) {
-                result_end_index = rows.length-1;
-            }
-            
-            for (let i = 0; i < rows.length; i++) { 
-                var eachDate = rows[i].date_time.split('T')[0].split('-'); // array of year, month, day
-                if (parseInt(inputED[0], 10) > parseInt(eachDate[0], 10)) {
-                    endIndex.push(i);
-                }
-                else if (parseInt(inputED[0], 10) === parseInt(eachDate[0], 10)) {
-                    if (parseInt(inputED[1], 10) > parseInt(eachDate[1], 10)) {
-                        endIndex.push(i);
-                    }
-                    else if (parseInt(inputED[1], 10) === parseInt(eachDate[1], 10)) {
-                        if (parseInt(inputED[2], 10) >= parseInt(eachDate[2], 10)) {
-                            endIndex.push(i);
-                        }
-                    }
-                }
-            }
-            if (endIndex.length !== 0) { // start date between or after the dates in database
-                result_end_index = endIndex[endIndex.length-1]; // the index of first case in the start date
-            }
-        }
-        
-        // ?code
-        var codeVar;
-        if (req.query.hasOwnProperty('code')) {
-            var inputCODE = req.query.code.split(',');
-            codeVar = [];
-            for (let i = 0; i < inputCODE.length; i++) {
-                codeVar.push(parseInt(inputCODE[i], 10));
-            }
-        }
-        else {
-            codeVar = -1;
-        }
-        
-        // ?grid
-        var gridVar;
-        var countGrid = 0;
-        if (req.query.hasOwnProperty('grid')) {
-            var inputGRID = req.query.grid.split(',');
-            gridVar = [];
-            for (let i = 0; i < inputGRID.length; i++) {
-                gridVar.push(parseInt(inputGRID[i], 10));
-            }
-        }
-        else {
-            gridVar = -1;
-        }
-        
-        // ?id
-        var IDVar;
-        var countID = 0;
-        if (req.query.hasOwnProperty('id')) {
-            var inputID = req.query.id.split(',');
-            IDVar = [];
-            for (let i = 0; i < inputID.length; i++) {
-                IDVar.push(parseInt(inputID[i], 10));
-            }
-        }
-        else {
-            IDVar = -1;
-        }
-        
-        // ?limit
-        var limitVar;
-        if (req.query.hasOwnProperty('limit')) {
-            limitVar = parseInt(req.query.limit, 10);
-        }
-        else {
-            limitVar = 10000;
-        }
-        
-        // ?format
-        var formatVar;
-        if (req.query.hasOwnProperty('format')) {
-            formatVar = req.query.format;
-        }
-        else {
-            formatVar = 'json';
-        }
-        
-        var afterFilter = filterIncident(result_start_index, result_end_index, codeVar, gridVar, IDVar, limitVar, formatVar, rows);
-        
-        if (afterFilter === null) {
-            res.status(500).send('Error: Failed filtering');
-        }
-        else if (formatVar === 'json') {
-            res.type('json').send(JSON.stringify(afterFilter, null, 4));
-        }
-        else if (formatVar === 'xml') {
-            var options = {compact: true, spaces: 4};
-            var result = convert.js2xml(afterFilter, options);
-            res.type('xml').send(result);
-        }
-        
-    });
-});*/
+});
 
 app.put('/new-incident', (req, res) => {
     var has_id = false;
@@ -619,6 +375,5 @@ app.put('/new-incident', (req, res) => {
     });
 });
 
- 
 
 var server = app.listen(port);
