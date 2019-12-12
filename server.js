@@ -5,14 +5,15 @@ var path = require('path');
 var express = require('express')
 var sqlite3 = require('sqlite3')
 var bodyParser = require('body-parser');
+var cors = require('cors');
 var convert = require('xml-js');
 
 var db_filename = path.join(__dirname, 'stpaul_crime.sqlite3');
 var app = express();
-var port = 8000;
+var port = parseInt(process.argv[2],10);
 
 app.use(bodyParser.urlencoded({extended: true}));
-
+app.use(cors());
 // open stpaul_crime.sqlite3 database
 var db = new sqlite3.Database(db_filename, sqlite3, (err) => {
     if (err) {

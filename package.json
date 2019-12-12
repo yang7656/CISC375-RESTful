@@ -22,6 +22,7 @@
         "url": "https://github.com/yang7656/CISC375-RESTful"
     },
     "dependencies": {
+        "cors": "^2.8.5",
         "express": "^4.17.1",
         "sqlite3": "^4.1.0",
         "xml-js": "^1.6.11"
