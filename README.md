@@ -3,6 +3,7 @@
 GET /codes
 - ?code (Number comma separated)
 - ?format (XML or JSON)
+
 GET /neighborhoods
 - ?id (Number comma separated)
 - ?format (XML or JSON)
