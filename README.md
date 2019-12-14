@@ -5,7 +5,7 @@ Be Sure to have Node
 - `cd` to the CISC375-RESTful
 - write on the console : `node server.js`
 
-Now Go to the https://lukfd.github.io/city-crime/index.html[https://lukfd.github.io/city-crime/index.html] and in the text box write `http://localhost:8000`
+Now Go to the https://lukfd.github.io/city-crime/index.html and in the text box write `http://localhost:8000`
 
 ## CISC375-RESTful
 
